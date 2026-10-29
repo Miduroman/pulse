@@ -11,6 +11,7 @@ model User {
   id        String   @id @default(cuid())
   name      String
   email     String   @unique
+  password  String @default("")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -18,7 +19,6 @@ model User {
   transactions Transaction[]
   budgets      Budget[]
 }
-
 model Account {
   id        String      @id @default(cuid())
   name      String

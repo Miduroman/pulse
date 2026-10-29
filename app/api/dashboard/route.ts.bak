@@ -1,0 +1,191 @@
+﻿
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../../lib/auth";
+import { prisma } from "../../../lib/prisma";
+
+export async function GET() {
+  try {
+    // 1. Periksa sesi login
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: "Silakan login terlebih dahulu." },
+        { status: 401 },
+      );
+    }
+
+    // 2. Cari pengguna yang sedang login
+    const user = await prisma.user.findUnique({
+      where: {
+        email: session.user.email,
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Pengguna tidak ditemukan." },
+        { status: 404 },
+      );
+    }
+
+    // 3. Ambil akun, transaksi, anggaran, dan kategori
+    const [accounts, transactions, budgets, categories] =
+      await Promise.all([
+        prisma.account.findMany({
+          where: {
+            userId: user.id,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        }),
+
+        prisma.transaction.findMany({
+          where: {
+            userId: user.id,
+          },
+          include: {
+            category: true,
+            account: true,
+          },
+          orderBy: {
+            date: "desc",
+          },
+        }),
+
+        prisma.budget.findMany({
+          where: {
+            userId: user.id,
+            month: 9,
+            year: 2026,
+          },
+          include: {
+            category: true,
+          },
+        }),
+
+        prisma.category.findMany({
+          orderBy: {
+            name: "asc",
+          },
+        }),
+      ]);
+
+    // 4. Hitung total saldo seluruh akun
+    const totalBalance = accounts.reduce(
+      (sum, account) => sum + Number(account.balance),
+      0,
+    );
+
+    // 5. Hitung total pemasukan
+    const income = transactions
+      .filter((transaction) => transaction.type === "INCOME")
+      .reduce(
+        (sum, transaction) => sum + Number(transaction.amount),
+        0,
+      );
+
+    // 6. Hitung total pengeluaran
+    const expenses = transactions
+      .filter((transaction) => transaction.type === "EXPENSE")
+      .reduce(
+        (sum, transaction) => sum + Number(transaction.amount),
+        0,
+      );
+
+    // 7. Hitung selisih pemasukan dan pengeluaran
+    const savings = income - expenses;
+
+    // 8. Hitung pengeluaran berdasarkan kategori
+    const categoryTotals = transactions
+      .filter((transaction) => transaction.type === "EXPENSE")
+      .reduce<Record<string, number>>((result, transaction) => {
+        const categoryName = transaction.category.name;
+
+        result[categoryName] =
+          (result[categoryName] ?? 0) +
+          Number(transaction.amount);
+
+        return result;
+      }, {});
+
+    const topCategories = Object.entries(categoryTotals)
+      .map(([name, amount]) => ({
+        name,
+        amount,
+      }))
+      .sort((a, b) => b.amount - a.amount);
+
+    // 9. Kirim seluruh data ke frontend
+    return NextResponse.json({
+      user: {
+        name: user.name,
+        email: user.email,
+      },
+
+      totalBalance,
+      income,
+      expenses,
+      savings,
+
+      accounts: accounts.map((account) => ({
+        id: account.id,
+        name: account.name,
+        type: account.type,
+        balance: Number(account.balance),
+        currency: account.currency,
+      })),
+
+      transactions: transactions.map((transaction) => ({
+        id: transaction.id,
+        description: transaction.description,
+        amount: Number(transaction.amount),
+        type: transaction.type,
+        date: transaction.date.toISOString(),
+
+        category: {
+          id: transaction.category.id,
+          name: transaction.category.name,
+          type: transaction.category.type,
+        },
+
+        account: {
+          id: transaction.account.id,
+          name: transaction.account.name,
+          type: transaction.account.type,
+        },
+      })),
+
+      budgets: budgets.map((budget) => ({
+        id: budget.id,
+        amount: Number(budget.amount),
+        month: budget.month,
+        year: budget.year,
+
+        category: {
+          id: budget.category.id,
+          name: budget.category.name,
+          type: budget.category.type,
+        },
+      })),
+
+      // Daftar kategori tetap tersedia meskipun belum ada transaksi
+      categories: categories.map((category) => ({
+        id: category.id,
+        name: category.name,
+        type: category.type,
+      })),
+
+      topCategories,
+    });
+  } catch (error) {
+    console.error("Dashboard API error:", error);
+
+    return NextResponse.json(
+      { error: "Gagal memuat data dashboard." },
+      { status: 500 },
+    );
+  }
+}

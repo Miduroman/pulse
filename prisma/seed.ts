@@ -1,4 +1,5 @@
 import "dotenv/config";
+import bcrypt from "bcryptjs";
 
 import {
   PrismaClient,
@@ -26,6 +27,7 @@ async function main() {
     create: {
       name: "Mikail",
       email: "demo@pulse.local",
+      password: await bcrypt.hash("PulseDemo123!", 10),
     },
   });
 
