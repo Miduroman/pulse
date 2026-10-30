@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import LogoutButton from "../components/logout-button";
@@ -67,6 +67,11 @@ currency: string;
 }[];
 transactions: Transaction[];
 budgets: Budget[];
+categories: {
+  id: string;
+  name: string;
+  type: string;
+}[];
 topCategories: {
 name: string;
 amount: number;
@@ -102,6 +107,11 @@ const [data, setData] = useState<DashboardData | null>(null);
 const [insight, setInsight] = useState<string>("");
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState("");
+const [budgetCategoryId, setBudgetCategoryId] = useState("");
+const [budgetAmount, setBudgetAmount] = useState("");
+const [budgetSaving, setBudgetSaving] = useState(false);
+const [budgetMessage, setBudgetMessage] = useState("");
+const [budgetError, setBudgetError] = useState("");
 
 const getCurrentMonth = () => {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -269,6 +279,94 @@ const budgetSpent =
   }, 0) ?? 0;
 
 const budgetRemaining = totalBudget - budgetSpent;
+
+const expenseCategories =
+  data?.categories.filter((category) => category.type === "EXPENSE") ?? [];
+
+const refreshDashboard = async () => {
+  const response = await fetch(
+    `/api/dashboard?month=${selectedMonthNumber}&year=${selectedYear}`,
+    { cache: "no-store" },
+  );
+
+  if (!response.ok) {
+    throw new Error("Gagal memuat ulang dashboard.");
+  }
+
+  const result = await response.json();
+  setData(result);
+};
+
+const handleBudgetSubmit = async (
+  event: React.FormEvent<HTMLFormElement>,
+) => {
+  event.preventDefault();
+  setBudgetMessage("");
+  setBudgetError("");
+
+  if (!budgetCategoryId || !budgetAmount || Number(budgetAmount) <= 0) {
+    setBudgetError("Pilih kategori dan masukkan nominal yang valid.");
+    return;
+  }
+
+  setBudgetSaving(true);
+
+  try {
+    const response = await fetch("/api/budgets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        categoryId: budgetCategoryId,
+        amount: Number(budgetAmount),
+        month: selectedMonthNumber,
+        year: selectedYear,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error ?? "Gagal menyimpan anggaran.");
+    }
+
+    await refreshDashboard();
+    setBudgetAmount("");
+    setBudgetMessage(result.message ?? "Anggaran berhasil disimpan.");
+  } catch (err) {
+    setBudgetError(
+      err instanceof Error ? err.message : "Terjadi kesalahan.",
+    );
+  } finally {
+    setBudgetSaving(false);
+  }
+};
+
+const handleBudgetDelete = async (id: string) => {
+  if (!window.confirm("Yakin ingin menghapus anggaran ini?")) return;
+
+  setBudgetMessage("");
+  setBudgetError("");
+
+  try {
+    const response = await fetch(
+      `/api/budgets?id=${encodeURIComponent(id)}`,
+      { method: "DELETE" },
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error ?? "Gagal menghapus anggaran.");
+    }
+
+    await refreshDashboard();
+    setBudgetMessage(result.message ?? "Anggaran berhasil dihapus.");
+  } catch (err) {
+    setBudgetError(
+      err instanceof Error ? err.message : "Terjadi kesalahan.",
+    );
+  }
+};
 
 if (loading) {
 return ( <main className="min-h-screen bg-[#08090b] text-white"> <div className="mx-auto max-w-7xl px-6 py-8"> <div className="animate-pulse space-y-8"> <div className="h-10 w-48 rounded-xl bg-white/10" /> <div className="grid gap-4 md:grid-cols-4">
@@ -650,8 +748,60 @@ Pulse </span> </div>
           </div>
         </div>
 
+        <form onSubmit={handleBudgetSubmit} className="mt-5 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+          <select
+            value={budgetCategoryId}
+            onChange={(event) => setBudgetCategoryId(event.target.value)}
+            required
+            className="min-w-0 rounded-xl border border-white/10 bg-[#111318] px-3 py-3 text-sm text-white outline-none focus:border-white/30"
+          >
+            <option value="">Pilih kategori pengeluaran</option>
+            {expenseCategories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="number"
+            min="1"
+            step="1"
+            inputMode="numeric"
+            value={budgetAmount}
+            onChange={(event) => setBudgetAmount(event.target.value)}
+            placeholder="Anggaran (Rp)"
+            required
+            className="min-w-0 rounded-xl border border-white/10 bg-[#111318] px-3 py-3 text-sm text-white outline-none focus:border-white/30"
+          />
+
+          <button
+            type="submit"
+            disabled={budgetSaving || expenseCategories.length === 0}
+            className="rounded-xl bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-white/80 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {budgetSaving ? "Menyimpan..." : "Simpan anggaran"}
+          </button>
+        </form>
+
+        {budgetMessage && (
+          <p className="mt-3 text-sm text-emerald-400">{budgetMessage}</p>
+        )}
+        {budgetError && (
+          <p className="mt-3 text-sm text-red-400">{budgetError}</p>
+        )}
+        {expenseCategories.length === 0 && (
+          <p className="mt-3 text-sm text-white/40">
+            Belum ada kategori pengeluaran yang tersedia.
+          </p>
+        )}
+        {data.budgets.length === 0 && (
+          <p className="mt-5 rounded-xl border border-dashed border-white/10 p-4 text-sm text-white/40">
+            Belum ada anggaran untuk periode ini. Pilih kategori dan masukkan nominal untuk mulai.
+          </p>
+        )}
         <div className="mt-6 space-y-5">
-          {data.budgets.map((budget) => {
+                    {data.budgets.map((budget) => {
             const spent = data.periodTransactions
               .filter(
                 (transaction) =>
@@ -738,8 +888,8 @@ Pulse </span> </div>
                   {transaction.description}
                 </p>
                 <p className="mt-1 text-xs text-white/35">
-                  {transaction.category.name} ·{" "}
-                  {transaction.account.name} ·{" "}
+                  {transaction.category.name} Â·{" "}
+                  {transaction.account.name} Â·{" "}
                   {formatDate(transaction.date)}
                 </p>
               </div>
@@ -763,7 +913,7 @@ Pulse </span> </div>
     <section className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
       <div className="flex gap-4">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-sm font-bold text-black">
-          ✦
+          âœ¦
         </div>
 
         <div>
@@ -787,7 +937,7 @@ Pulse </span> </div>
     </section>
 
     <footer className="py-10 text-center text-xs text-white/20">
-      Pulse · Personal financial intelligence
+      Pulse Â· Personal financial intelligence
     </footer>
   </div>
 </main>
@@ -795,6 +945,7 @@ Pulse </span> </div>
 
 );
 }
+
 
 
 
