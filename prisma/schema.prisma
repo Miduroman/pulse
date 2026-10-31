@@ -11,14 +11,17 @@ model User {
   id        String   @id @default(cuid())
   name      String
   email     String   @unique
-  password  String @default("")
+  password  String   @default("")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   accounts     Account[]
   transactions Transaction[]
   budgets      Budget[]
+  transfers    Transfer[]
+aiInsights AIInsight[]
 }
+
 model Account {
   id        String      @id @default(cuid())
   name      String
@@ -31,7 +34,9 @@ model Account {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  transactions Transaction[]
+  transactions      Transaction[]
+  transfersSent     Transfer[] @relation("TransferFrom")
+  transfersReceived Transfer[] @relation("TransferTo")
 }
 
 model Category {
@@ -60,6 +65,27 @@ model Transaction {
 
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])
+}
+
+model Transfer {
+  id          String   @id @default(cuid())
+  description String
+  amount      Decimal  @db.Decimal(14, 2)
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  fromAccountId String
+  fromAccount   Account @relation("TransferFrom", fields: [fromAccountId], references: [id], onDelete: Cascade)
+
+  toAccountId String
+  toAccount   Account @relation("TransferTo", fields: [toAccountId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@index([fromAccountId])
+  @@index([toAccountId])
 }
 
 model Budget {
@@ -94,4 +120,21 @@ enum CategoryType {
 enum TransactionType {
   INCOME
   EXPENSE
+}
+
+
+model AIInsight {
+  id        String   @id @default(cuid())
+  userId    String
+  month     Int
+  year      Int
+  analysis  String   @db.Text
+  summary   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, month, year])
+  @@index([userId, year, month])
 }

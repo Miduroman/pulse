@@ -23,7 +23,7 @@ export default function Home() {
               About
             </a>
             <Link
-              href="/dashboard"
+              href="/login"
               className="rounded-full border border-zinc-800 px-4 py-2 text-zinc-200 transition hover:border-zinc-600"
             >
               Get Started
@@ -52,7 +52,7 @@ export default function Home() {
 
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
               <Link
-                href="/dashboard"
+                href="/login"
                 className="rounded-full bg-white px-6 py-3 text-center text-sm font-medium text-zinc-950 transition hover:bg-zinc-200"
               >
                 Explore Pulse
@@ -107,7 +107,7 @@ export default function Home() {
             financial activity easier to understand.
           </p>
           <Link
-            href="/dashboard"
+            href="/login"
             className="mt-6 inline-flex rounded-full bg-white px-5 py-3 text-sm font-medium text-zinc-950 transition hover:bg-zinc-200"
           >
             Open dashboard

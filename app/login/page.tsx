@@ -1,4 +1,5 @@
-﻿"use client";
+﻿
+"use client";
 
 import { FormEvent, useState } from "react";
 import { signIn } from "next-auth/react";
@@ -7,7 +8,7 @@ import { useRouter } from "next/navigation";
 export default function LoginPage() {
   const router = useRouter();
 
-  const [email, setEmail] = useState("demo@pulse.local");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,7 +20,7 @@ export default function LoginPage() {
     setLoading(true);
 
     const result = await signIn("credentials", {
-      email,
+      email: email.trim().toLowerCase(),
       password,
       redirect: false,
     });
@@ -46,7 +47,7 @@ export default function LoginPage() {
               Welcome back
             </h1>
             <p className="mt-2 text-sm text-white/45">
-              Sign in to continue to your financial intelligence dashboard.
+              Login to continue to your financial intelligence dashboard.
             </p>
           </div>
 
@@ -90,9 +91,19 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? "Logging in..." : "Login"}
             </button>
           </form>
+
+          <p className="mt-6 text-center text-sm text-white/40">
+            Don't have an account?{" "}
+            <a
+              href="/register"
+              className="font-medium text-white/80 transition hover:text-white"
+            >
+              Create account
+            </a>
+          </p>
         </div>
       </div>
     </main>
