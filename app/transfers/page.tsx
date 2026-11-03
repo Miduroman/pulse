@@ -1,6 +1,7 @@
 
 "use client";
 
+import { notifyOnboardingTour } from "@/lib/onboarding-tour-events";
 import { useEffect, useState } from "react";
 
 type Account = {
@@ -241,6 +242,7 @@ export default function TransfersPage() {
       }
 
       resetForm();
+      notifyOnboardingTour("transfer-created");
       setMessage("Transfer berhasil disimpan.");
 
       await loadData();
@@ -295,7 +297,10 @@ export default function TransfersPage() {
         </header>
 
         <div className="grid gap-6 lg:grid-cols-[420px_1fr]">
-          <section className="h-fit rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6">
+          <section
+            data-tour="transfer-form"
+            className="h-fit rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6"
+          >
             <div className="mb-6">
               <h2 className="font-medium">
                 New transfer

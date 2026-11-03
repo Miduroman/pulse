@@ -1,6 +1,7 @@
 
 "use client";
 
+import { notifyOnboardingTour } from "@/lib/onboarding-tour-events";
 import { useEffect, useState } from "react";
 
 type Account = {
@@ -204,6 +205,10 @@ export default function TransactionsPage() {
 
       const wasEditing = Boolean(editingId);
 
+      if (!wasEditing) {
+        notifyOnboardingTour("transaction-created");
+      }
+
       resetForm();
 
       setMessage(
@@ -264,7 +269,10 @@ export default function TransactionsPage() {
         </header>
 
         <div className="grid gap-6 lg:grid-cols-[420px_1fr]">
-          <section className="h-fit rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6">
+          <section
+            data-tour="transaction-form"
+            className="h-fit rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6"
+          >
             <div className="mb-6">
               <h2 className="font-medium">
                 {editingId ? "Edit transaction" : "Add transaction"}

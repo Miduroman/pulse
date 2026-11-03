@@ -1,4 +1,5 @@
-﻿import { NextResponse } from "next/server";
+﻿
+import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "../../../../lib/prisma";
 
@@ -25,9 +26,7 @@ export async function POST(request: Request) {
     }
 
     const existingUser = await prisma.user.findUnique({
-      where: {
-        email,
-      },
+      where: { email },
     });
 
     if (existingUser) {
@@ -39,23 +38,37 @@ export async function POST(request: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-      },
+    const user = await prisma.$transaction(async (tx) => {
+      const newUser = await tx.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          onboardingCompleted: false,
+        },
+      });
+
+      await tx.account.create({
+        data: {
+          name: "Cash",
+          type: "CASH",
+          balance: 0,
+          currency: "IDR",
+          userId: newUser.id,
+        },
+      });
+
+      return newUser;
     });
 
     return NextResponse.json(
       {
         message: "Akun berhasil dibuat.",
-        user,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+        },
       },
       { status: 201 },
     );
@@ -68,4 +81,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

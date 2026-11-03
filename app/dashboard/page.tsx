@@ -1,6 +1,7 @@
 
 "use client";
 
+import { notifyOnboardingTour } from "@/lib/onboarding-tour-events";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import LogoutButton from "../components/logout-button";
 import {
@@ -238,6 +239,8 @@ export default function DashboardPage() {
 
   // Generate a new AI analysis only when the user clicks the button
 const generateAiAnalysis = useCallback(async () => {
+  notifyOnboardingTour("ai-generated");
+
   setAiLoading(true);
   setAiError("");
 
@@ -433,6 +436,8 @@ const generateAiAnalysis = useCallback(async () => {
 
       await refreshDashboard();
 
+      notifyOnboardingTour("budget-created");
+
       setBudgetAmount("");
       setBudgetMessage(result.message ?? "Anggaran berhasil disimpan.");
     } catch (err) {
@@ -610,7 +615,10 @@ const generateAiAnalysis = useCallback(async () => {
         </header>
 
         {/* Financial overview */}
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section
+          data-tour="dashboard-overview"
+          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        >
           {[
             {
               label: "Total balance",
@@ -1000,6 +1008,7 @@ const generateAiAnalysis = useCallback(async () => {
             </div>
 
             <form
+              data-tour="budget-form"
               onSubmit={handleBudgetSubmit}
               className="mt-6 grid gap-3 sm:grid-cols-2"
             >
@@ -1260,6 +1269,7 @@ const generateAiAnalysis = useCallback(async () => {
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <button
                   type="button"
+                  data-tour="pulse-ai"
                   onClick={generateAiAnalysis}
                   disabled={aiLoading}
                   className="rounded-xl bg-violet-400 px-5 py-3 text-sm font-semibold text-[#100b1b] transition hover:bg-violet-300 disabled:cursor-not-allowed disabled:opacity-50"

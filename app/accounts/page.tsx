@@ -1,6 +1,7 @@
 
 "use client";
 
+import { notifyOnboardingTour } from "@/lib/onboarding-tour-events";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -164,8 +165,11 @@ export default function AccountsPage() {
 
       setMessage(result.message || "Account saved successfully.");
 
+      if (!editingId) {
+        notifyOnboardingTour("account-created");
+      }
+
       resetForm();
-      setMessage(result.message || "Account saved successfully.");
 
       await loadAccounts();
     } catch (err) {
@@ -276,6 +280,7 @@ export default function AccountsPage() {
 
               <button
                 type="button"
+                data-tour="account-create"
                 onClick={resetForm}
                 className="rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-white/65 transition hover:bg-white/[0.06] hover:text-white"
               >
@@ -350,6 +355,7 @@ export default function AccountsPage() {
           {/* Account form */}
           <section
             id="account-form"
+            data-tour="account-form"
             className="scroll-mt-24 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5 sm:p-6"
           >
             <div className="mb-6">

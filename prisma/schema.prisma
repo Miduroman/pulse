@@ -15,6 +15,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  onboardingCompleted Boolean @default(true)
+
   accounts     Account[]
   transactions Transaction[]
   budgets      Budget[]
